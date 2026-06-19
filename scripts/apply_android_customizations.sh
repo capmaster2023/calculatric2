@@ -196,7 +196,7 @@ public class NativeVideoActivity extends Activity {
         player.play();
     }
 
-    @Override protected void onStop() { super.onStop(); if (player != null) player.pause(); }
+    @Override public void onStop() { super.onStop(); if (player != null) player.pause(); }
     @Override protected void onDestroy() { if (player != null) { player.release(); player = null; } super.onDestroy(); }
 }
 EOFJAVA
@@ -362,13 +362,13 @@ public class MainActivity extends BridgeActivity {
     }
 
     @Override
-    protected void onPause() {
+    public void onPause() {
         forceCalculatorScreen();
         super.onPause();
     }
 
     @Override
-    protected void onStop() {
+    public void onStop() {
         forceCalculatorScreen();
         super.onStop();
     }
