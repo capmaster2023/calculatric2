@@ -1,0 +1,8 @@
+{
+  "appId": "com.capmaster2023.calculatrice",
+  "appName": "Calculatrice",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https"
+  }
+}

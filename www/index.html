@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1,user-scalable=no">
+<title>Calculatrice</title>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}html,body{margin:0;width:100%;height:100%;font-family:Arial,system-ui,sans-serif;overflow:hidden;background:#f5f5f5;color:#111}.screen{width:100vw;height:100vh}.toast{position:fixed;left:50%;bottom:105px;transform:translateX(-50%);background:#222;color:#fff;border-radius:18px;padding:12px 16px;z-index:99;display:none;max-width:90%;text-align:center}.toast.on{display:block}
+#calc{background:#f5f5f5;padding:28px 22px 12px}.calcTop{height:28vh;display:flex;justify-content:flex-end;align-items:flex-end;font-size:58px;color:#333;padding:0 24px 24px;overflow:hidden;white-space:nowrap}.calcKeys{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;max-width:420px;margin:0 auto}.key{height:72px;border:0;border-radius:36px;background:#fff;font-size:38px;color:#3a3a3a;box-shadow:0 14px 28px rgba(0,0,0,.06)}.key.op{background:#ddd}.key.eq{background:#2dbf6a;color:#fff}.key.red{color:#ed6363}.key:active{transform:scale(.97)}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.72);display:none;align-items:center;justify-content:center;z-index:50;padding:18px}.modal.on{display:flex}.card{width:min(440px,100%);background:#fff;border-radius:28px;padding:22px;color:#111}.card h2{margin:0 0 10px;font-size:26px}.card p{color:#555;line-height:1.35}.input{width:100%;border:1px solid #ddd;background:#f6f6f6;border-radius:18px;padding:16px;font-size:18px;margin:9px 0}.btn{width:100%;border:0;border-radius:18px;padding:16px;font-size:18px;font-weight:700;margin-top:10px}.blue{background:#0a84ff;color:#fff}.gray{background:#ddd;color:#222}.small{font-size:12px;color:#777;margin-top:8px;line-height:1.35}
+</style>
+</head>
+<body>
+<section id="calc" class="screen">
+  <div id="display" class="calcTop">0</div>
+  <div class="calcKeys">
+    <button class="key red" data-k="C">C</button><button class="key red" data-k="⌫">⌫</button><button class="key" data-k="%">%</button><button class="key op" data-k="/">÷</button>
+    <button class="key" data-k="7">7</button><button class="key" data-k="8">8</button><button class="key" data-k="9">9</button><button class="key op" data-k="*">×</button>
+    <button class="key" data-k="4">4</button><button class="key" data-k="5">5</button><button class="key" data-k="6">6</button><button class="key op" data-k="-">−</button>
+    <button class="key" data-k="1">1</button><button class="key" data-k="2">2</button><button class="key" data-k="3">3</button><button class="key op" data-k="+">+</button>
+    <button class="key" data-k="()">()</button><button class="key" data-k="0">0</button><button class="key" data-k=".">,</button><button class="key eq" data-k="=">=</button>
+  </div>
+</section>
+
+<div id="setup" class="modal">
+  <div class="card">
+    <h2>Code secret</h2>
+    <p>Entre le calcul qui ouvrira la galerie. Exemple : <b>7×13+42÷6−5×8+91</b></p>
+    <input id="setupCalc" class="input" placeholder="Calcul secret">
+    <button id="saveSetup" class="btn blue">Enregistrer</button>
+    <button id="closeSetup" class="btn gray">Fermer</button>
+    <div class="small">Pour effacer/reconfigurer plus tard : appuie sur <b>C C C C C 5 5</b>. Ça supprime le code sauvegardé et rouvre cette configuration.</div>
+  </div>
+</div>
+<div id="toast" class="toast"></div>
+
+<script>
+const $=id=>document.getElementById(id);
+let expr='', resetSeq=[];
+const CFG_KEY='secret_gallery_calc_v2';
+
+function toast(t){$('toast').textContent=t;$('toast').classList.add('on');setTimeout(()=>$('toast').classList.remove('on'),2200)}
+function cfg(){try{return JSON.parse(localStorage.getItem(CFG_KEY)||'null')}catch(e){return null}}
+function setCfg(v){localStorage.setItem(CFG_KEY,JSON.stringify(v))}
+function clearCfg(){localStorage.removeItem(CFG_KEY)}
+function norm(s){return (s||'').replace(/×/g,'*').replace(/÷/g,'/').replace(/−/g,'-').replace(/,/g,'.').replace(/\s+/g,'').trim()}
+function pretty(s){return (s||'').replace(/\*/g,'×').replace(/\//g,'÷').replace(/-/g,'−').replace(/\./g,',')}
+function show(){display.textContent=expr?pretty(expr):'0'}
+function calcEval(s){
+  if(!/^[0-9+\-*/().%]+$/.test(s))throw 0;
+  return Function('"use strict";return ('+s.replace(/%/g,'/100')+')')();
+}
+function openSetup(){ $('setupCalc').value = cfg()?.calc ? pretty(cfg().calc) : ''; $('setup').classList.add('on'); }
+function closeSetup(){ $('setup').classList.remove('on'); }
+function openGallery(){ location.href='galerie.html'; }
+
+function press(k){
+  if(k==='C'){
+    expr=''; resetSeq.push('C'); resetSeq=resetSeq.slice(-7);
+    show();
+    return;
+  }
+  resetSeq.push(k); resetSeq=resetSeq.slice(-7);
+  if(resetSeq.join('')==='CCCCC55'){
+    clearCfg(); expr=''; show(); toast('Code effacé'); openSetup(); return;
+  }
+  if(k==='⌫'){expr=expr.slice(0,-1);show();return}
+  if(k==='='){
+    const saved=cfg(); const n=norm(expr);
+    if(saved && n===saved.calc){expr='';show();openGallery();return}
+    try{expr=String(calcEval(n));show()}catch(e){expr='Erreur';show();setTimeout(()=>{expr='';show()},600)}
+    return;
+  }
+  if(k==='()'){
+    const opens=(expr.match(/\(/g)||[]).length, closes=(expr.match(/\)/g)||[]).length;
+    expr += opens>closes ? ')' : '('; show(); return;
+  }
+  expr+=k; show();
+}
+
+document.querySelectorAll('.key').forEach(b=>b.onclick=()=>press(b.dataset.k));
+$('saveSetup').onclick=()=>{
+  const c=norm($('setupCalc').value);
+  if(!c){toast('Entre un calcul secret');return}
+  try{calcEval(c)}catch(e){toast('Calcul invalide');return}
+  setCfg({calc:c,created:Date.now()}); closeSetup(); toast('Code enregistré');
+};
+$('closeSetup').onclick=()=>closeSetup();
+window.addEventListener('load',()=>{show(); if(!cfg())openSetup();});
+try{document.title='Calculatrice'}catch(e){}
+</script>
+</body>
+</html>
